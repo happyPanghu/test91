@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>91视频数据管理</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: 250px;
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-right: 1px solid #dee2e6;
+        }
+        .main-content {
+            margin-left: 250px;
+            padding: 20px;
+        }
+        .nav-link {
+            color: #495057;
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin-bottom: 5px;
+        }
+        .nav-link:hover {
+            background-color: #e9ecef;
+        }
+        .nav-link.active {
+            background-color: #0d6efd;
+            color: white;
+        }
+        .data-list {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        .data-item {
+            margin-bottom: 15px;
+            padding: 15px;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+        }
+        .data-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .data-meta {
+            color: #6c757d;
+            font-size: 0.9em;
+        }
+        .video-count {
+            font-weight: bold;
+        }
+        .video-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            padding: 20px;
+        }
+        .video-card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .video-preview {
+            position: relative;
+            width: 100%;
+            height: 150px;
+            border-radius: 5px;
+            overflow: hidden;
+            cursor: pointer;
+        }
+        .video-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .video-preview .play-button {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 50px;
+            height: 50px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            transition: all 0.3s;
+        }
+        .video-preview:hover .play-button {
+            background: rgba(0, 0, 0, 0.7);
+            transform: translate(-50%, -50%) scale(1.1);
+        }
+        .video-info {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .video-title {
+            font-weight: bold;
+            font-size: 0.95em;
+            color: #333;
+            line-height: 1.3;
+            letter-spacing: -0.3px;
+        }
+        .video-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            color: #666;
+            font-size: 0.85em;
+            letter-spacing: -0.2px;
+        }
+        .video-meta span {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .video-meta i {
+            color: #0d6efd;
+            font-size: 0.9em;
+        }
+        .video-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .video-actions a {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            color: #0d6efd;
+            text-decoration: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            background: rgba(13, 110, 253, 0.1);
+            transition: all 0.2s;
+            font-size: 0.85em;
+        }
+        .video-actions a:hover {
+            background: rgba(13, 110, 253, 0.2);
+            text-decoration: none;
+        }
+        .video-actions a i {
+            font-size: 1em;
+        }
+        .video-link {
+            margin-top: 8px;
+        }
+        .video-link a {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            color: #0d6efd;
+            text-decoration: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            background: rgba(13, 110, 253, 0.1);
+            transition: background-color 0.2s;
+            font-size: 0.85em;
+        }
+        .video-link a:hover {
+            background: rgba(13, 110, 253, 0.2);
+            text-decoration: none;
+        }
+        .modal-video {
+            width: 100%;
+            height: 100%;
+            max-width: 800px;
+            max-height: 450px;
+        }
+        .video-item {
+            margin-bottom: 15px;
+            padding: 15px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .video-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .video-cover {
+            width: 100%;
+            height: 150px;
+            border-radius: 5px;
+            object-fit: cover;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h3 class="mb-4">91视频管理</h3>
+        <nav class="nav flex-column">
+            <a class="nav-link" href="/">爬虫管理</a>
+            <a class="nav-link active" href="/data.html">数据管理</a>
+        </nav>
+    </div>
+
+    <div class="main-content">
+        <h1 class="mb-4">数据管理</h1>
+
+        <div id="fileListSection">
+            <div class="row mb-4">
+                <div class="col">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h3>数据文件列表</h3>
+                        <div class="controls">
+                            <button id="refreshBtn" class="btn btn-primary">刷新数据</button>
+                        </div>
+                    </div>
+                    <div id="dataList" class="data-list mt-3"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="fileDetailSection" style="display: none;">
+            <div class="back-button">
+                <button id="backBtn" class="btn btn-secondary">返回列表</button>
+            </div>
+            <div class="search-box">
+                <input type="text" id="searchInput" class="form-control" placeholder="搜索视频标题...">
+            </div>
+            <div class="row mb-4">
+                <div class="col">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h3 id="detailTitle">文件详情</h3>
+                    </div>
+                    <div id="videoList" class="video-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 视频播放模态框 -->
+    <div class="modal fade" id="videoModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">视频播放</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <video id="modalVideo" class="modal-video" controls>
+                        <source src="" type="video/mp4">
+                        您的浏览器不支持视频播放。
+                    </video>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let currentFile = null;
+        let currentData = null;
+        const videoModal = new bootstrap.Modal(document.getElementById('videoModal'));
+
+        // 加载数据文件列表
+        async function loadDataList() {
+            try {
+                const response = await fetch('/api/data/list');
+                const data = await response.json();
+                
+                const dataListDiv = document.getElementById('dataList');
+                dataListDiv.innerHTML = data.map(item => `
+                    <div class="data-item">
+                        <div class="data-header">
+                            <h4>${item.filename}</h4>
+                            <div class="data-meta">
+                                <span class="video-count">视频数: ${item.total}</span>
+                                <span class="ms-3">更新时间: ${new Date(item.timestamp).toLocaleString()}</span>
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            <button class="btn btn-sm btn-primary view-data" data-filename="${item.filename}">查看详情</button>
+                            <button class="btn btn-sm btn-danger delete-data" data-filename="${item.filename}">删除文件</button>
+                        </div>
+                    </div>
+                `).join('');
+
+                // 添加查看详情事件
+                document.querySelectorAll('.view-data').forEach(button => {
+                    button.addEventListener('click', async () => {
+                        const filename = button.dataset.filename;
+                        await loadFileDetail(filename);
+                    });
+                });
+
+                // 添加删除事件
+                document.querySelectorAll('.delete-data').forEach(button => {
+                    button.addEventListener('click', async () => {
+                        const filename = button.dataset.filename;
+                        if (confirm(`确定要删除文件 ${filename} 吗？`)) {
+                            try {
+                                const response = await fetch(`/api/data/delete?filename=${encodeURIComponent(filename)}`, {
+                                    method: 'DELETE'
+                                });
+                                if (response.ok) {
+                                    loadDataList();
+                                }
+                            } catch (error) {
+                                console.error('删除文件失败:', error);
+                            }
+                        }
+                    });
+                });
+            } catch (error) {
+                console.error('加载数据列表失败:', error);
+            }
+        }
+
+        // 加载文件详情
+        async function loadFileDetail(filename) {
+            try {
+                const response = await fetch(`/api/data/detail?filename=${encodeURIComponent(filename)}`);
+                const data = await response.json();
+                
+                currentFile = filename;
+                currentData = data;
+                
+                // 显示详情区域
+                document.getElementById('fileListSection').style.display = 'none';
+                document.getElementById('fileDetailSection').style.display = 'block';
+                document.getElementById('detailTitle').textContent = `文件详情 - ${filename}`;
+                
+                // 显示视频列表
+                displayVideoList(data.videos);
+            } catch (error) {
+                console.error('加载文件详情失败:', error);
+            }
+        }
+
+        // 显示视频列表
+        function displayVideoList(videos) {
+            const videoListDiv = document.getElementById('videoList');
+            videoListDiv.innerHTML = '';
+            
+            // 按收藏数排序
+            const sortedVideos = [...videos].sort((a, b) => {
+                const favoritesA = parseInt(a.favorites) || 0;
+                const favoritesB = parseInt(b.favorites) || 0;
+                return favoritesB - favoritesA;
+            });
+            
+            sortedVideos.forEach(video => {
+                const div = document.createElement('div');
+                div.className = 'video-item';
+                div.innerHTML = `
+                    <div class="video-preview" data-video-url="${video.videoUrl}">
+                        <img src="${video.coverImage}" alt="${video.title}" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYwIiBoZWlnaHQ9IjkwIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSIxNjAiIGhlaWdodD0iOTAiIGZpbGw9IiNlZWVlZWUiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiBmaWxsPSIjOTk5IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Tm8gSW1hZ2U8L3RleHQ+PC9zdmc+'">
+                        <div class="play-button">▶</div>
+                    </div>
+                    <div class="video-info">
+                        <div class="video-title">${video.title || '未知标题'}</div>
+                        <div class="video-meta">
+                            <span><i>⏱</i> ${video.time || '未知'}</span>
+                            <span><i>👁</i> ${video.views || '未知'}</span>
+                            <span><i>❤</i> ${video.favorites || '未知'}</span>
+                            <span><i>📅</i> ${video.addTime || '未知'}</span>
+                        </div>
+                        <div class="video-actions">
+                            <a href="${video.videoUrl}" target="_blank">
+                                <i>🔗</i> 视频链接
+                            </a>
+                        </div>
+                    </div>
+                `;
+                videoListDiv.appendChild(div);
+
+                // 添加视频预览点击事件
+                const preview = div.querySelector('.video-preview');
+                preview.addEventListener('click', () => {
+                    const videoUrl = preview.dataset.videoUrl;
+                    const videoElement = document.getElementById('modalVideo');
+                    videoElement.src = videoUrl;
+                    videoModal.show();
+                });
+            });
+        }
+
+        // 搜索功能
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            if (!currentData) return;
+            
+            const searchText = e.target.value.toLowerCase();
+            const filteredVideos = currentData.videos.filter(video => 
+                (video.title || '').toLowerCase().includes(searchText)
+            );
+            
+            // 搜索后仍然保持排序
+            displayVideoList(filteredVideos);
+        });
+
+        // 返回按钮事件
+        document.getElementById('backBtn').addEventListener('click', () => {
+            document.getElementById('fileListSection').style.display = 'block';
+            document.getElementById('fileDetailSection').style.display = 'none';
+            currentFile = null;
+            currentData = null;
+            document.getElementById('searchInput').value = '';
+        });
+
+        // 刷新按钮事件
+        document.getElementById('refreshBtn').addEventListener('click', loadDataList);
+
+        // 初始加载
+        loadDataList();
+    </script>
+</body>
+</html> 

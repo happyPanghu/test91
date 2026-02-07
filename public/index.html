@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>91视频爬虫管理</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: 250px;
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-right: 1px solid #dee2e6;
+        }
+        .main-content {
+            margin-left: 250px;
+            padding: 20px;
+        }
+        .nav-link {
+            color: #495057;
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin-bottom: 5px;
+        }
+        .nav-link:hover {
+            background-color: #e9ecef;
+        }
+        .nav-link.active {
+            background-color: #0d6efd;
+            color: white;
+        }
+        .progress {
+            height: 25px;
+        }
+        .video-list {
+            max-height: 600px;
+            overflow-y: auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            padding: 20px;
+        }
+        .video-item {
+            margin-bottom: 0;
+            padding: 15px;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+        .video-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        .video-preview {
+            position: relative;
+            width: 100%;
+            height: 150px;
+            border-radius: 5px;
+            overflow: hidden;
+            cursor: pointer;
+        }
+        .video-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .play-button {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 40px;
+            height: 40px;
+            background-color: rgba(0,0,0,0.5);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .video-preview:hover .play-button {
+            opacity: 1;
+        }
+        .video-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .video-title {
+            font-weight: bold;
+            margin-bottom: 0;
+            font-size: 1em;
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .video-meta {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            color: #6c757d;
+            font-size: 0.85em;
+        }
+        .video-meta span {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .video-actions {
+            margin-top: auto;
+            padding-top: 10px;
+            border-top: 1px solid #dee2e6;
+        }
+        .video-actions a {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: #0d6efd;
+            text-decoration: none;
+            font-size: 0.9em;
+        }
+        .video-actions a:hover {
+            text-decoration: underline;
+        }
+        .progress-container {
+            margin: 20px 0;
+            width: 100%;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .progress {
+            height: 100%;
+            background-color: #4CAF50;
+            transition: width 0.3s ease;
+            will-change: width;
+        }
+        .progress-text {
+            margin-top: 5px;
+            text-align: center;
+            font-size: 14px;
+            color: #666;
+        }
+        .progress-detail {
+            margin-top: 5px;
+            text-align: center;
+            font-size: 14px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h3 class="mb-4">91视频管理</h3>
+        <nav class="nav flex-column">
+            <a class="nav-link active" href="/">爬虫管理</a>
+            <a class="nav-link" href="/data.html">数据管理</a>
+        </nav>
+    </div>
+
+    <div class="main-content">
+        <h1 class="mb-4">爬虫管理</h1>
+
+        <div class="config-panel">
+            <h3>爬虫配置</h3>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="startUrl" class="form-label">起始URL</label>
+                        <input type="text" class="form-control" id="startUrl" value="https://w1004.9p58b.com/v.php?category=hot&viewtype=basic">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="mb-3">
+                        <label for="startPage" class="form-label">起始页码</label>
+                        <input type="number" class="form-control" id="startPage" value="1" min="1">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="mb-3">
+                        <label for="endPage" class="form-label">结束页码</label>
+                        <input type="number" class="form-control" id="endPage" value="1" min="1">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="mb-3">
+                        <label for="concurrency" class="form-label">并发数量</label>
+                        <input type="number" class="form-control" id="concurrency" value="3" min="1" max="10">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="mb-3">
+                        <label for="timeout" class="form-label">超时时间(秒)</label>
+                        <input type="number" class="form-control" id="timeout" value="120" min="30" max="300">
+                    </div>
+                </div>
+            </div>
+            <button id="saveConfig" class="btn btn-primary">保存配置</button>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h3>爬虫状态</h3>
+                    <div class="controls">
+                        <button id="startBtn" class="btn btn-primary">开始爬取</button>
+                        <button id="pauseBtn" class="btn btn-warning" style="display: none;">暂停爬取</button>
+                        <button id="saveBtn" class="btn btn-success">保存结果</button>
+                        <button id="stopBtn" class="btn btn-danger">关闭爬虫</button>
+                    </div>
+                </div>
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress" id="progress"></div>
+                    </div>
+                    <div class="progress-text" id="progressText">当前进度: 0%</div>
+                    <div class="progress-detail" id="progressDetail">第 0/0 页，视频 0/0</div>
+                </div>
+                <div id="error" class="alert alert-danger mt-2 d-none"></div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-12">
+                <h3>视频列表</h3>
+                <div id="videoList" class="video-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let updateInterval = null;
+
+        // 状态更新
+        function updateStatus(data) {
+            document.getElementById('status').textContent = data.isRunning ? '运行中' : '已停止';
+            document.getElementById('status').className = data.isRunning ? 'status running' : 'status stopped';
+            
+            // 更新进度条
+            const progress = document.getElementById('progress');
+            const progressText = document.getElementById('progressText');
+            const progressDetail = document.getElementById('progressDetail');
+            
+            // 使用requestAnimationFrame实现平滑过渡
+            requestAnimationFrame(() => {
+                progress.style.width = `${data.progress}%`;
+                progressText.textContent = `当前进度: ${Math.round(data.progress)}%`;
+                
+                // 更新详细的进度信息
+                if (data.currentPage && data.endPage && data.currentPageProgress && data.totalVideosInCurrentPage) {
+                    const currentVideos = Math.round(data.currentPageProgress * data.totalVideosInCurrentPage / 100);
+                    progressDetail.textContent = `第 ${data.currentPage}/${data.endPage} 页，视频 ${currentVideos}/${data.totalVideosInCurrentPage}`;
+                } else {
+                    progressDetail.textContent = '等待开始...';
+                }
+            });
+            
+            // 更新按钮状态
+            document.getElementById('startBtn').disabled = data.isRunning;
+            document.getElementById('pauseBtn').disabled = !data.isRunning;
+            document.getElementById('saveBtn').disabled = data.isRunning || data.videoUrls.length === 0;
+            document.getElementById('stopBtn').disabled = !data.isRunning;
+            
+            // 更新视频列表
+            const videoList = document.getElementById('videoList');
+            videoList.innerHTML = '';
+            
+            data.videoUrls.forEach(video => {
+                const li = document.createElement('li');
+                li.textContent = `${video.title} - ${video.videoUrl}`;
+                videoList.appendChild(li);
+            });
+        }
+
+        // 轮询状态
+        let statusInterval;
+        function startStatusPolling() {
+            // 每500毫秒更新一次状态
+            statusInterval = setInterval(async () => {
+                try {
+                    const response = await fetch('/api/status');
+                    const data = await response.json();
+                    updateStatus(data);
+                    
+                    // 如果爬虫停止运行，停止轮询
+                    if (!data.isRunning) {
+                        clearInterval(statusInterval);
+                    }
+                } catch (error) {
+                    console.error('获取状态失败:', error);
+                }
+            }, 500);
+        }
+
+        // 开始爬虫
+        document.getElementById('startBtn').addEventListener('click', async () => {
+            const startUrl = document.getElementById('startUrl').value;
+            const startPage = parseInt(document.getElementById('startPage').value);
+            const endPage = parseInt(document.getElementById('endPage').value);
+            
+            if (!startUrl || isNaN(startPage) || isNaN(endPage)) {
+                alert('请填写完整的爬取信息');
+                return;
+            }
+            
+            if (startPage > endPage) {
+                alert('起始页码不能大于结束页码');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/start', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ startUrl, startPage, endPage })
+                });
+                
+                if (response.ok) {
+                    // 开始轮询状态
+                    startStatusPolling();
+                } else {
+                    const error = await response.json();
+                    alert(error.error || '启动爬虫失败');
+                }
+            } catch (error) {
+                console.error('启动爬虫失败:', error);
+                alert('启动爬虫失败');
+            }
+        });
+
+        // 暂停/继续爬虫时保持轮询
+        document.getElementById('pauseBtn').addEventListener('click', async () => {
+            const isPaused = document.getElementById('pauseBtn').textContent === '暂停';
+            try {
+                const response = await fetch('/api/pause', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ pause: isPaused })
+                });
+                
+                if (response.ok) {
+                    document.getElementById('pauseBtn').textContent = isPaused ? '继续' : '暂停';
+                }
+            } catch (error) {
+                console.error('操作失败:', error);
+            }
+        });
+
+        // 关闭爬虫
+        document.getElementById('stopBtn').addEventListener('click', async () => {
+            if (confirm('确定要关闭爬虫吗？当前爬取进度将丢失。')) {
+                try {
+                    const response = await fetch('/api/stop', {
+                        method: 'POST'
+                    });
+                    
+                    if (response.ok) {
+                        // 停止轮询
+                        clearInterval(statusInterval);
+                        // 更新状态
+                        const data = await response.json();
+                        updateStatus(data);
+                        alert('爬虫已关闭');
+                    }
+                } catch (error) {
+                    console.error('关闭爬虫失败:', error);
+                    alert('关闭爬虫失败');
+                }
+            }
+        });
+
+        // 保存结果
+        document.getElementById('saveBtn').addEventListener('click', () => {
+            // 从localStorage获取数据
+            const savedData = localStorage.getItem('crawlerData');
+            if (!savedData) {
+                alert('没有可保存的数据');
+                return;
+            }
+
+            const videoUrls = JSON.parse(savedData);
+            
+            fetch('/api/save', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ videoUrls })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const message = `
+                        保存成功！
+                        文件名: ${data.filename}
+                        总视频数: ${data.total}
+                        新增视频: ${data.added}
+                        重复视频: ${data.duplicates}
+                    `;
+                    alert(message);
+                    // 保存成功后清除localStorage中的数据
+                    localStorage.removeItem('crawlerData');
+                }
+            });
+        });
+
+        // 初始加载配置
+        fetch('/api/config')
+            .then(response => response.json())
+            .then(config => {
+                document.getElementById('startUrl').value = config.startUrl;
+                document.getElementById('startPage').value = config.startPage;
+                document.getElementById('endPage').value = config.endPage;
+                document.getElementById('concurrency').value = config.concurrency;
+                document.getElementById('timeout').value = config.timeout / 1000;
+            });
+
+        // 初始加载状态
+        startStatusPolling();
+
+        // 页面关闭时清理定时器
+        window.addEventListener('beforeunload', () => {
+            if (statusInterval) {
+                clearInterval(statusInterval);
+            }
+        });
+    </script>
+</body>
+</html> 
